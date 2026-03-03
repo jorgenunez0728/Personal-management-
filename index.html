@@ -150,62 +150,42 @@
 
     <!-- ===== WHATSAPP ===== -->
     <div class="tab-panel" id="panel-whatsapp">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="wa-layout">
 
-            <!-- Generador -->
-            <div class="card">
-                <div class="card-title">📤 Generar Mensaje</div>
-                <div class="form-group">
-                    <label>Para</label>
-                    <select id="waTarget" onchange="genWA()"><option value="all">Todos</option></select>
-                </div>
-                <div class="form-group" style="margin-top:5px;">
-                    <label>Formato</label>
-                    <div class="view-toggle" style="margin-top:3px;">
-                        <button class="vt-btn active" onclick="setWAFmt('quick',this)">🎯 Respuesta Rápida</button>
-                        <button class="vt-btn"        onclick="setWAFmt('classic',this)">📝 Clásico</button>
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top:5px;">
-                    <label>Incluir</label>
-                    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;">
-                        <label style="display:flex;gap:2px;text-transform:none;cursor:pointer;font-size:0.82rem;"><input type="checkbox" id="waP" checked onchange="genWA()">Pend</label>
-                        <label style="display:flex;gap:2px;text-transform:none;cursor:pointer;font-size:0.82rem;"><input type="checkbox" id="waI" checked onchange="genWA()">Prog</label>
-                        <label style="display:flex;gap:2px;text-transform:none;cursor:pointer;font-size:0.82rem;"><input type="checkbox" id="waB" checked onchange="genWA()">Bloq</label>
-                    </div>
-                </div>
-                <div class="wa-preview" id="waPreview"></div>
-                <div class="btn-group" style="margin-top:6px;">
-                    <button class="btn btn-wa"        onclick="sendWA()">📱 WhatsApp</button>
-                    <button class="btn btn-secondary"  onclick="copyWA()">📋</button>
-                    <button class="btn btn-secondary"  onclick="sendAllWA()">📱 Enviar a Todos</button>
+        <!-- Enviar Links -->
+        <div class="card">
+            <div class="card-title">📤 Enviar</div>
+            <div id="waPhoneWarn" style="display:none;padding:8px 12px;background:#fef3c7;border:1px solid #fde047;border-radius:8px;font-size:0.8rem;color:#92400e;margin-bottom:10px;">
+                ⚙️ Configura tu número en <strong>Configuración → WhatsApp</strong> para que los técnicos puedan responderte.
+            </div>
+            <div id="waMemberCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px;margin-bottom:12px;"></div>
+            <button id="waSendAllBtn" class="btn btn-wa" style="width:100%;" onclick="sendAllLinks()">🚀 Enviar link a todos</button>
+        </div>
+
+        <!-- Estado de Ronda (visible solo cuando hay ronda activa) -->
+        <div class="card" id="waRoundSection" style="display:none;">
+            <div class="card-title">📊 Estado de la Ronda</div>
+            <div id="waRoundStatus"></div>
+        </div>
+
+        <!-- Respuestas -->
+        <div class="card">
+            <div class="card-title">📥 Respuestas</div>
+            <div class="form-group">
+                <label>De</label>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <select id="waFrom" style="flex:1;min-width:120px;"><option value="">Selecciona...</option></select>
+                    <span id="waFromDetect" style="display:none;font-size:0.75rem;font-weight:700;color:var(--accent);white-space:nowrap;"></span>
                 </div>
             </div>
-
-            <!-- Parser -->
-            <div class="card">
-                <div class="card-title">📥 Interpretar Respuesta</div>
-                <p style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">Pega lo que te contestaron. El sistema interpreta respuestas libres, emojis, números, y formato rápido.</p>
-                <div class="form-group">
-                    <label>De</label>
-                    <select id="waFrom"><option value="">...</option></select>
-                </div>
-                <textarea id="waResp" placeholder="Ejemplos de lo que detecta:&#10;&#10;1. ✅  2. 🔄 60%  3. 🚫 falta sensor&#10;&#10;O texto libre:&#10;la 1 ya está, la 2 va como al 70, la 3 no he podido porque no llegó el material&#10;&#10;O con formato rápido:&#10;1A 2B60 3C falta pieza" style="width:100%;min-height:100px;margin-top:6px;"></textarea>
-                <div style="display:flex;gap:4px;margin-top:6px;">
-                    <button class="btn btn-primary" style="flex:1;" onclick="parseWA()">🔍 Analizar</button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('waResp').value='';document.getElementById('waResults').innerHTML='';">🗑️</button>
-                </div>
-                <div id="waResults" style="margin-top:8px;"></div>
-                <div style="margin-top:10px;padding:10px;background:var(--surface-alt);border-radius:10px;border:1px solid var(--border);">
-                    <div style="font-weight:700;font-size:0.82rem;margin-bottom:5px;">📖 Cheat Sheet — Lo que detecta el parser:</div>
-                    <div style="font-size:0.75rem;color:var(--muted);line-height:1.6;">
-                        <div>✅ A listo hecho terminé ya completé → <strong>Completada</strong></div>
-                        <div>🔄 B 60% va al 70 avancé medio → <strong>En Progreso + %</strong></div>
-                        <div>🚫 C bloqueado no puedo falta parado → <strong>Bloqueada + motivo</strong></div>
-                        <div style="margin-top:4px;font-style:italic;">Formato rápido: <strong>1A 2B60 3C motivo</strong><br>1=tarea, A/B/C=status, número=%</div>
-                    </div>
-                </div>
+            <textarea id="waResp"
+                placeholder="Pega la respuesta del técnico...&#10;&#10;Formatos detectados:&#10;• 1A  2B 70  3C no llegó herramienta&#10;• ✅ 🔄 60%  🚫 falta sensor&#10;• La 1 ya está, la 2 va al 70%"
+                oninput="autoDetectSender(this.value)"
+                style="width:100%;min-height:110px;margin-top:6px;"></textarea>
+            <div style="display:flex;gap:4px;margin-top:6px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="parseWA()">🔍 Analizar y Aplicar</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('waResp').value='';document.getElementById('waResults').innerHTML='';document.getElementById('waFromDetect').style.display='none';">🗑️</button>
             </div>
+            <div id="waResults" style="margin-top:8px;"></div>
         </div>
     </div>
 
@@ -282,6 +262,19 @@
             <div class="card-title">Dashboard Layout</div>
             <p style="font-size:0.82rem;color:var(--muted);margin-bottom:8px;">Arrastra los widgets en el Dashboard para reorganizarlos. Tu layout se guarda automáticamente.</p>
             <button class="btn btn-secondary" onclick="resetDashLayout()">🔄 Restaurar Layout Original</button>
+        </div>
+        <div class="card">
+            <div class="card-title">📱 WhatsApp</div>
+            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;">Configura tu número para que los técnicos puedan responderte, y la URL base si la app está en línea.</p>
+            <div class="form-group">
+                <label>Tu número (con código de país)</label>
+                <input type="text" id="cfgPhone" placeholder="521234567890" style="width:100%;">
+            </div>
+            <div class="form-group" style="margin-top:6px;">
+                <label>URL base de la app <span style="font-size:0.7rem;color:var(--muted);">(donde está alojada, ej. GitHub Pages)</span></label>
+                <input type="text" id="cfgBase" placeholder="https://mi-sitio.github.io/qatest/" style="width:100%;">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="saveConfig()" style="margin-top:8px;">Guardar configuración WA</button>
         </div>
         <div class="card">
             <div class="card-title">Notas</div>

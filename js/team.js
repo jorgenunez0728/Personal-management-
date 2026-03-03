@@ -25,12 +25,17 @@ function renderTeam() {
             return g ? `<span class="group-badge" style="background:${g.color}20;color:${g.color};border:1px solid ${g.color}40;">${esc(g.name)}</span>` : '';
         }).join('');
 
+        const lastSent = (db.waLog || [])
+            .filter(l => l.memberId === m.id && l.type === 'sent')
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+
         return `<div class="team-card">
             <div class="team-avatar" style="background:${m.color}">${ini(m.name)}</div>
             <div class="tc-name">${esc(m.name)}</div>
             <div class="tc-role">${esc(m.role || '')} · ${esc(m.dept || '')}</div>
             ${groups ? `<div style="text-align:center;margin-bottom:4px;">${groups}</div>` : ''}
             ${m.phone ? `<div style="font-size:0.7rem;color:var(--muted);text-align:center;">📱 ${esc(m.phone)}</div>` : ''}
+            ${lastSent ? `<div style="font-size:0.68rem;color:var(--muted);text-align:center;">WA hace ${tA(lastSent.timestamp)}</div>` : ''}
             <div class="tc-stats">
                 <div><div class="tc-stat-value">${tasks.length}</div><div class="tc-stat-label">Total</div></div>
                 <div><div class="tc-stat-value">${active}</div><div class="tc-stat-label">Activas</div></div>

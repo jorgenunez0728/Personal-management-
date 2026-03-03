@@ -5,6 +5,12 @@
 function renderSettings() {
     loadAutoConfig();
 
+    // Config WA
+    if (document.getElementById('cfgPhone'))
+        document.getElementById('cfgPhone').value = (db.config && db.config.phone) || '';
+    if (document.getElementById('cfgBase'))
+        document.getElementById('cfgBase').value = (db.config && db.config.baseUrl) || '';
+
     // Categorías
     document.getElementById('catList').innerHTML = db.categories.map((c, i) => `
         <div style="display:flex;justify-content:space-between;padding:5px 8px;background:var(--surface-alt);border-radius:7px;margin-bottom:3px;">
@@ -86,6 +92,15 @@ function exportDB() {
     toast('📥');
 }
 
+function saveConfig() {
+    if (!db.config) db.config = { phone: '', baseUrl: '' };
+    db.config.phone   = (document.getElementById('cfgPhone').value || '').trim().replace(/[^\d+]/g, '');
+    db.config.baseUrl = (document.getElementById('cfgBase').value  || '').trim();
+    if (db.config.baseUrl && !db.config.baseUrl.endsWith('/')) db.config.baseUrl += '/';
+    saveDB();
+    toast('✅ Guardado');
+}
+
 function importDB(e) {
     const f = e.target.files[0];
     if (!f) return;
@@ -95,11 +110,12 @@ function importDB(e) {
             const d = JSON.parse(ev.target.result);
             if (d.tasks && d.members) {
                 db = d;
-                ['projects','groups','templates','notifications','weeklyLog','notes','activity'].forEach(k => {
+                ['projects','groups','templates','notifications','weeklyLog','notes','activity','waLog','waRounds'].forEach(k => {
                     if (!db[k]) db[k] = [];
                 });
                 if (!db.autoConfig) db.autoConfig = { unblock: true, progress: true, notify: true };
                 if (!db.categories) db.categories = ['General','Emisiones','Mantenimiento','Calidad','Seguridad','Administrativo'];
+                if (!db.config) db.config = { phone: '', baseUrl: '' };
                 saveDB();
                 refreshAll();
                 toast('📤 OK');

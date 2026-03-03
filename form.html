@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>📋 QA Test — Reporte</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green: #16a34a; --green-bg: #dcfce7; --green-border: #86efac;
+            --yellow: #ca8a04; --yellow-bg: #fef9c3; --yellow-border: #fde047;
+            --red: #dc2626; --red-bg: #fee2e2; --red-border: #fca5a5;
+            --surface: #f1f5f9; --card: #ffffff; --border: #e2e8f0;
+            --text: #0f172a; --muted: #64748b; --accent: #2563eb;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface: #0f172a; --card: #1e293b; --border: #334155;
+                --text: #f1f5f9; --muted: #94a3b8;
+                --green-bg: #14532d; --green-border: #166534;
+                --yellow-bg: #422006; --yellow-border: #78350f;
+                --red-bg: #7f1d1d; --red-border: #991b1b;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--surface); color: var(--text);
+            min-height: 100vh; padding-bottom: 90px;
+            font-size: 16px; line-height: 1.5;
+        }
+
+        .header {
+            background: var(--accent); color: #fff;
+            padding: 20px 16px 16px; text-align: center;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .header h1 { font-size: 1.05rem; font-weight: 800; }
+        .header p  { font-size: 0.9rem; margin-top: 3px; opacity: 0.9; }
+
+        .progress-bar   { height: 5px; background: rgba(255,255,255,0.3); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .progress-fill  { height: 100%; background: #fff; border-radius: 3px; transition: width 0.4s ease; }
+
+        .tasks { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+        .task-card {
+            background: var(--card); border-radius: 14px;
+            border: 2px solid var(--border); padding: 16px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .task-card.done     { border-color: var(--green-border); background: var(--green-bg); }
+        .task-card.progress { border-color: var(--yellow-border); background: var(--yellow-bg); }
+        .task-card.blocked  { border-color: var(--red-border); background: var(--red-bg); }
+
+        .task-num   { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+        .task-title { font-size: 1rem; font-weight: 700; margin: 5px 0 5px; }
+        .task-due   { font-size: 0.78rem; color: var(--muted); margin-bottom: 14px; }
+
+        .btn-row { display: flex; gap: 8px; }
+
+        .status-btn {
+            flex: 1; padding: 14px 4px; border: 2px solid var(--border);
+            border-radius: 12px; background: var(--card); color: var(--text);
+            font-size: 0.8rem; font-weight: 700; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            transition: all 0.15s; min-height: 68px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .status-btn:active  { transform: scale(0.94); }
+        .status-btn .emoji  { font-size: 1.5rem; line-height: 1; }
+
+        .status-btn.sel-done     { background: var(--green);  border-color: var(--green);  color: #fff; }
+        .status-btn.sel-progress { background: #ca8a04;        border-color: #ca8a04;        color: #fff; }
+        .status-btn.sel-blocked  { background: var(--red);    border-color: var(--red);    color: #fff; }
+
+        .extra {
+            margin-top: 14px; animation: slideDown 0.18s ease;
+        }
+        @keyframes slideDown { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-row input[type=range] {
+            flex: 1; height: 10px; cursor: pointer;
+            accent-color: #ca8a04; border-radius: 5px;
+        }
+        .pct-badge {
+            min-width: 48px; text-align: center;
+            font-weight: 800; font-size: 1.15rem;
+            font-family: monospace; color: #ca8a04;
+        }
+        .block-input {
+            width: 100%; padding: 10px 12px;
+            border-radius: 10px; border: 2px solid var(--red-border);
+            background: var(--card); color: var(--text);
+            font-size: 0.92rem; resize: none; font-family: inherit;
+        }
+        .block-input:focus { outline: none; border-color: var(--red); }
+
+        .footer {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding: 12px 16px; background: var(--card);
+            border-top: 2px solid var(--border);
+            box-shadow: 0 -4px 24px rgba(0,0,0,.12);
+        }
+        .send-btn {
+            width: 100%; padding: 17px; border-radius: 14px;
+            background: #25D366; border: none; color: #fff;
+            font-size: 1.05rem; font-weight: 800; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: opacity 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .send-btn:disabled             { opacity: 0.4; cursor: not-allowed; }
+        .send-btn:not(:disabled):active { opacity: 0.8; }
+
+        #errorMsg {
+            text-align: center; padding: 60px 20px; color: var(--muted);
+        }
+        #errorMsg h2 { font-size: 1.4rem; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<div class="footer">
+    <button class="send-btn" id="sendBtn" disabled onclick="sendResponse()">
+        <span>📱</span><span id="sendLabel">Selecciona todas las tareas</span>
+    </button>
+</div>
+
+<script>
+    'use strict';
+
+    let data    = null;
+    let answers = {}; // idx -> { status, pct, reason }
+
+    // ---- Helpers ----
+
+    function esc(s) {
+        return s ? String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+    }
+
+    function fS(d) {
+        if (!d) return '';
+        const dt = new Date(d + 'T00:00:00');
+        return dt.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+    }
+
+    // ---- Init ----
+
+    function init() {
+        const hash = location.hash.slice(1);
+        if (!hash) {
+            document.getElementById('app').innerHTML =
+                '<div id="errorMsg"><h2>⚠️ Link inválido</h2><p>Este link no tiene datos. Pide uno nuevo a tu jefe.</p></div>';
+            return;
+        }
+        try {
+            data = JSON.parse(decodeURIComponent(atob(hash)));
+        } catch (e) {
+            document.getElementById('app').innerHTML =
+                '<div id="errorMsg"><h2>⚠️ Error al leer</h2><p>Link corrupto o expirado. Pide uno nuevo.</p></div>';
+            return;
+        }
+        if (!data.t || !data.t.length) {
+            document.getElementById('app').innerHTML =
+                '<div id="errorMsg"><h2>✅ Sin pendientes</h2><p>No tienes tareas pendientes asignadas. ¡Buen trabajo!</p></div>';
+            return;
+        }
+        render();
+    }
+
+    // ---- Render ----
+
+    function render() {
+        const firstName = data.n ? data.n.split(' ')[0] : '?';
+        document.title = `📋 QA Test · ${firstName}`;
+
+        const ansCount = Object.keys(answers).length;
+        const total    = data.t.length;
+        const pct      = total ? Math.round(ansCount / total * 100) : 0;
+
+        let html = `
+            <div class="header">
+                <h1>📋 QA Test</h1>
+                <p>Hola, <strong>${esc(firstName)}</strong>! Reporta tus pendientes:</p>
+                <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+            </div>
+            <div class="tasks">`;
+
+        data.t.forEach((task, idx) => {
+            const ans      = answers[idx];
+            const cardCls  = ans ? ans.status : '';
+            html += `
+            <div class="task-card ${cardCls}" id="card-${idx}">
+                <div class="task-num">Tarea ${idx + 1} de ${total}</div>
+                <div class="task-title">${esc(task.l)}</div>
+                ${task.d ? `<div class="task-due">📅 ${fS(task.d)}</div>` : ''}
+                <div class="btn-row">
+                    <button class="status-btn ${ans && ans.status === 'done'     ? 'sel-done'     : ''}"
+                            onclick="pick(${idx},'done')">
+                        <span class="emoji">✅</span><span>Listo</span>
+                    </button>
+                    <button class="status-btn ${ans && ans.status === 'progress' ? 'sel-progress' : ''}"
+                            onclick="pick(${idx},'progress')">
+                        <span class="emoji">🔄</span><span>Progreso</span>
+                    </button>
+                    <button class="status-btn ${ans && ans.status === 'blocked'  ? 'sel-blocked'  : ''}"
+                            onclick="pick(${idx},'blocked')">
+                        <span class="emoji">🚫</span><span>Bloqueado</span>
+                    </button>
+                </div>
+                ${renderExtra(idx, ans)}
+            </div>`;
+        });
+
+        html += '</div>';
+        document.getElementById('app').innerHTML = html;
+
+        // Restore textarea values (can't set via innerHTML safely)
+        Object.keys(answers).forEach(idx => {
+            const ans = answers[idx];
+            if (ans && ans.status === 'blocked') {
+                const ta = document.getElementById('reason-' + idx);
+                if (ta) ta.value = ans.reason || '';
+            }
+        });
+
+        updateSendBtn();
+    }
+
+    function renderExtra(idx, ans) {
+        if (!ans) return '';
+        if (ans.status === 'progress') {
+            const pct = ans.pct !== undefined ? ans.pct : 50;
+            return `<div class="extra">
+                <div class="slider-row">
+                    <span style="font-size:0.8rem;font-weight:700;color:var(--muted);">%</span>
+                    <input type="range" min="1" max="99" value="${pct}"
+                           oninput="setPct(${idx},this.value)">
+                    <div class="pct-badge" id="pct-${idx}">${pct}%</div>
+                </div>
+            </div>`;
+        }
+        if (ans.status === 'blocked') {
+            return `<div class="extra">
+                <textarea class="block-input" id="reason-${idx}" rows="2"
+                          placeholder="¿Qué pasó? (opcional)"
+                          oninput="setReason(${idx},this.value)"></textarea>
+            </div>`;
+        }
+        return '';
+    }
+
+    // ---- Interaction ----
+
+    function pick(idx, status) {
+        if (answers[idx] && answers[idx].status === status) {
+            delete answers[idx]; // deselect
+        } else {
+            answers[idx] = { status, pct: 50, reason: '' };
+        }
+        render();
+        // Scroll the card into view smoothly
+        requestAnimationFrame(() => {
+            const card = document.getElementById('card-' + idx);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    }
+
+    function setPct(idx, val) {
+        if (answers[idx]) {
+            answers[idx].pct = parseInt(val);
+            const badge = document.getElementById('pct-' + idx);
+            if (badge) badge.textContent = val + '%';
+        }
+    }
+
+    function setReason(idx, val) {
+        if (answers[idx]) answers[idx].reason = val;
+    }
+
+    function updateSendBtn() {
+        const total = data ? data.t.length : 0;
+        const done  = Object.keys(answers).length;
+        const btn   = document.getElementById('sendBtn');
+        const lbl   = document.getElementById('sendLabel');
+        if (done < total) {
+            btn.disabled     = true;
+            const rem        = total - done;
+            lbl.textContent  = `Faltan ${rem} tarea${rem > 1 ? 's' : ''}`;
+        } else {
+            btn.disabled    = false;
+            lbl.textContent = '📱 Enviar respuesta';
+        }
+    }
+
+    // ---- Build & Send ----
+
+    function buildMessage() {
+        const lines = [`*${data.n}*`];
+        data.t.forEach((task, idx) => {
+            const ans = answers[idx];
+            if (!ans) return;
+            if (ans.status === 'done') {
+                lines.push(`${idx + 1}A`);
+            } else if (ans.status === 'progress') {
+                lines.push(`${idx + 1}B ${ans.pct || 50}`);
+            } else if (ans.status === 'blocked') {
+                lines.push(`${idx + 1}C${ans.reason ? ' ' + ans.reason : ''}`);
+            }
+        });
+        return lines.join('\n');
+    }
+
+    function sendResponse() {
+        const msg   = buildMessage();
+        const phone = data.j;
+        if (!phone) {
+            // No phone configured — show message so tech can copy & send manually
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(msg).then(() => {
+                    alert('Mensaje copiado al portapapeles. Pégalo en WhatsApp a tu jefe.');
+                });
+            } else {
+                prompt('Copia este mensaje y envíalo por WhatsApp:', msg);
+            }
+            return;
+        }
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank') || (window.location.href = url);
+    }
+
+    init();
+</script>
+</body>
+</html>

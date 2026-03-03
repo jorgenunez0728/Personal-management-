@@ -2,7 +2,7 @@
 // DASHBOARD.JS — Dashboard con widgets arrastrables
 // ============================================================
 
-const DEFAULT_WIDGETS = ['stats','projects','urgent','workload','velocity','predictions','activity','automations'];
+const DEFAULT_WIDGETS = ['stats','projects','urgent','workload','velocity','predictions','activity','automations','wa-round'];
 
 function getDashLayout()        { return db.dashLayout || [...DEFAULT_WIDGETS]; }
 function saveDashLayout(layout) { db.dashLayout = layout; saveDB(); }
@@ -42,7 +42,8 @@ function renderWidget(wid) {
         velocity:    '📈 Velocidad Semanal',
         predictions: '🔮 Predicciones',
         activity:    '📋 Actividad',
-        automations: '⚡ Automatizaciones'
+        automations: '⚡ Automatizaciones',
+        'wa-round':  '📱 Ronda WA'
     };
     const bodies = {
         projects:    renderWProjects,
@@ -51,7 +52,8 @@ function renderWidget(wid) {
         velocity:    renderWVelocity,
         predictions: renderWPredictions,
         activity:    renderWActivity,
-        automations: renderWAutomations
+        automations: renderWAutomations,
+        'wa-round':  renderWRound
     };
     if (!bodies[wid]) return '';
     return `<div class="dash-widget" data-widget="${wid}">
