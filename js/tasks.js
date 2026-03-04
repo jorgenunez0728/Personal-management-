@@ -207,12 +207,13 @@ function kcCard(t) {
                   onclick="toggleTaskSelect('${t.id}',event)"
                   style="position:absolute;top:8px;right:8px;width:16px;height:16px;cursor:pointer;z-index:2;">`
         : '';
+    const onclk = multiSelectMode ? `toggleTaskSelect('${t.id}',event)` : `showDet('${t.id}')`;
 
     return `<div class="kanban-card ${!met ? 'blocked-card' : ''}"
         style="position:relative;"
         draggable="${!multiSelectMode && (met || t.status === 'done')}"
         ondragstart="event.dataTransfer.setData('text/plain','${t.id}')"
-        onclick="${multiSelectMode ? `toggleTaskSelect('${t.id}',event)` : `showDet('${t.id}')`}">
+        onclick="${onclk}">
         ${chkHtml}
         <div class="kc-priority-bar kc-bar-${t.priority}"></div>
         ${proj ? `<span class="project-tag" style="background:${proj.color}20;color:${proj.color};border:1px solid ${proj.color}40;">${esc(proj.name)}</span>` : ''}
