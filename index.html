@@ -93,6 +93,7 @@
                 <button class="filter-chip"        onclick="filterTasks('urgent',this)">🔥</button>
             </div>
             <button class="btn btn-primary" onclick="openTaskModal()">＋</button>
+            <button id="btnMultiSel" class="btn btn-secondary btn-sm" onclick="toggleMultiSelect()" title="Seleccionar múltiples tareas">☑ Sel</button>
         </div>
         <!-- Vista Kanban -->
         <div id="kanbanView">
@@ -277,6 +278,15 @@
             <button class="btn btn-primary btn-sm" onclick="saveConfig()" style="margin-top:8px;">Guardar configuración WA</button>
         </div>
         <div class="card">
+            <div class="card-title">🗑️ Papelera</div>
+            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;">Las tareas eliminadas se guardan 30 días. Puedes restaurarlas antes de que desaparezcan.</p>
+            <div id="trashList"></div>
+            <button class="btn btn-danger btn-sm" style="margin-top:8px;"
+                    onclick="if(confirm('¿Vaciar papelera permanentemente? Esta acción no se puede deshacer.'))emptyTrash()">
+                Vaciar papelera
+            </button>
+        </div>
+        <div class="card">
             <div class="card-title">Notas</div>
             <textarea id="qNote" placeholder="Nota..." rows="2"></textarea>
             <button class="btn btn-primary btn-sm" style="margin-top:4px;" onclick="addNote()">📌</button>
@@ -285,6 +295,21 @@
     </div>
 
 </div><!-- /.container -->
+
+<!-- ===== BULK TOOLBAR ===== -->
+<div id="bulkToolbar" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+     z-index:300;background:var(--text);color:#fff;border-radius:14px;padding:10px 16px;
+     align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.35);white-space:nowrap;">
+    <span id="bulkCount" style="font-weight:700;font-size:0.88rem;min-width:80px;"></span>
+    <button style="background:rgba(255,255,255,.18);border:none;border-radius:8px;padding:4px 12px;cursor:pointer;color:#fff;font-size:0.82rem;font-weight:600;"
+            onclick="openBulkStatusPicker()">Estado</button>
+    <button style="background:rgba(255,255,255,.18);border:none;border-radius:8px;padding:4px 12px;cursor:pointer;color:#fff;font-size:0.82rem;font-weight:600;"
+            onclick="openBulkAssignPicker()">Asignar</button>
+    <button style="background:rgba(239,68,68,.25);border:none;border-radius:8px;padding:4px 12px;cursor:pointer;color:#fca5a5;font-size:0.82rem;font-weight:600;"
+            onclick="bulkDelete()">🗑 Eliminar</button>
+    <button style="background:transparent;border:none;padding:4px 6px;cursor:pointer;color:#fff;font-size:1.1rem;line-height:1;"
+            onclick="clearSelection()" title="Cancelar selección">✕</button>
+</div>
 
 <!-- ===== MODALES ===== -->
 
@@ -479,6 +504,17 @@
             <button class="modal-close" onclick="closeModal('tplModal')">✕</button>
         </div>
         <div class="modal-body" id="tplBody"></div>
+    </div>
+</div>
+
+<!-- Modal Acciones en Lote -->
+<div class="modal-overlay" id="bulkModal" onclick="if(event.target===this)closeModal('bulkModal')">
+    <div class="modal" style="max-width:320px;">
+        <div class="modal-header">
+            <h3>Acción en lote</h3>
+            <button class="modal-close" onclick="closeModal('bulkModal')">✕</button>
+        </div>
+        <div class="modal-body" id="bulkBody"></div>
     </div>
 </div>
 

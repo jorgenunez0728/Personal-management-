@@ -7,6 +7,126 @@ let currentFilter = 'all';
 let tmpDeps = [];
 let tmpST   = [];
 
+// --- MULTI-SELECCIÓN ---
+let multiSelectMode = false;
+let selectedTasks   = new Set();
+
+function toggleMultiSelect() {
+    multiSelectMode = !multiSelectMode;
+    if (!multiSelectMode) selectedTasks.clear();
+    const btn = document.getElementById('btnMultiSel');
+    if (btn) btn.classList.toggle('active', multiSelectMode);
+    renderTasks();
+    renderBulkToolbar();
+}
+
+function toggleTaskSelect(id, e) {
+    e.stopPropagation();
+    if (selectedTasks.has(id)) selectedTasks.delete(id);
+    else                       selectedTasks.add(id);
+    const chk = document.querySelector(`[data-task-chk="${id}"]`);
+    if (chk) chk.checked = selectedTasks.has(id);
+    renderBulkToolbar();
+}
+
+function clearSelection() {
+    selectedTasks.clear();
+    multiSelectMode = false;
+    const btn = document.getElementById('btnMultiSel');
+    if (btn) btn.classList.remove('active');
+    renderTasks();
+    renderBulkToolbar();
+}
+
+function renderBulkToolbar() {
+    const tb = document.getElementById('bulkToolbar');
+    if (!tb) return;
+    const n = selectedTasks.size;
+    tb.style.display = (multiSelectMode && n > 0) ? 'flex' : 'none';
+    const cnt = document.getElementById('bulkCount');
+    if (cnt) cnt.textContent = `${n} seleccionada${n !== 1 ? 's' : ''}`;
+}
+
+function openBulkStatusPicker() {
+    document.getElementById('bulkBody').innerHTML =
+        ['pending','progress','review','done','blocked'].map(s =>
+            `<button class="btn btn-secondary" style="width:100%;text-align:left;margin-bottom:4px;"
+                     onclick="bulkSetStatus('${s}');closeModal('bulkModal')">${sL(s)}</button>`
+        ).join('');
+    openModal('bulkModal');
+}
+
+function bulkSetStatus(status) {
+    selectedTasks.forEach(id => {
+        const t = db.tasks.find(x => x.id === id);
+        if (!t) return;
+        t.status = status;
+        if (status === 'done') { t.completedAt = new Date().toISOString(); runAutomations(t.id); }
+    });
+    saveDB();
+    lg(`📋 Lote: ${selectedTasks.size} → ${sL(status)}`);
+    toast(`✅ ${selectedTasks.size} tarea${selectedTasks.size !== 1 ? 's' : ''} → ${sL(status)}`);
+    clearSelection();
+    refreshAll();
+}
+
+function openBulkAssignPicker() {
+    document.getElementById('bulkBody').innerHTML =
+        `<div style="font-size:0.88rem;font-weight:700;margin-bottom:8px;">Reasignar a:</div>` +
+        db.members.map(m =>
+            `<button class="btn btn-secondary" style="width:100%;text-align:left;margin-bottom:4px;"
+                     onclick="bulkAssign('${m.id}')">${esc(m.name)}</button>`
+        ).join('');
+    openModal('bulkModal');
+}
+
+function bulkAssign(memberId) {
+    const m = db.members.find(x => x.id === memberId);
+    selectedTasks.forEach(id => {
+        const t = db.tasks.find(x => x.id === id);
+        if (t) t.assignee = memberId;
+    });
+    saveDB();
+    toast(`✅ ${selectedTasks.size} tarea${selectedTasks.size !== 1 ? 's' : ''} → ${m ? esc(m.name) : '?'}`);
+    closeModal('bulkModal');
+    clearSelection();
+    refreshAll();
+}
+
+function bulkDelete() {
+    const ids   = [...selectedTasks];
+    const count = ids.length;
+    if (!db.trash) db.trash = [];
+    ids.forEach(id => {
+        const t = db.tasks.find(x => x.id === id);
+        if (!t) return;
+        db.tasks.forEach(x => { if (x.deps) x.deps = x.deps.filter(d => d !== id); });
+        db.tasks = db.tasks.filter(x => x.id !== id);
+        db.trash.unshift({ ...t, deletedAt: new Date().toISOString() });
+    });
+    const cut = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    db.trash = db.trash.filter(x => x.deletedAt > cut);
+    saveDB();
+    clearSelection();
+    refreshAll();
+    toastUndo(`${count} tarea${count !== 1 ? 's' : ''} eliminada${count !== 1 ? 's' : ''}`, () => {
+        ids.forEach(id => restoreTask(id));
+    });
+}
+
+function restoreTask(id) {
+    if (!db.trash) return;
+    const idx = db.trash.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const t = { ...db.trash[idx] };
+    delete t.deletedAt;
+    db.tasks.push(t);
+    db.trash.splice(idx, 1);
+    saveDB();
+    refreshAll();
+    toast('↩️ Restaurada');
+}
+
 // Versiones con debounce para el buscador
 const renderTasksD = debounce(renderTasks, 200);
 
@@ -81,10 +201,19 @@ function kcCard(t) {
     const sc   = tS(t);
     const sp   = stPct(t);
 
+    const chkHtml = multiSelectMode
+        ? `<input type="checkbox" data-task-chk="${t.id}"
+                  ${selectedTasks.has(t.id) ? 'checked' : ''}
+                  onclick="toggleTaskSelect('${t.id}',event)"
+                  style="position:absolute;top:8px;right:8px;width:16px;height:16px;cursor:pointer;z-index:2;">`
+        : '';
+
     return `<div class="kanban-card ${!met ? 'blocked-card' : ''}"
-        draggable="${met || t.status === 'done'}"
+        style="position:relative;"
+        draggable="${!multiSelectMode && (met || t.status === 'done')}"
         ondragstart="event.dataTransfer.setData('text/plain','${t.id}')"
-        onclick="showDet('${t.id}')">
+        onclick="${multiSelectMode ? `toggleTaskSelect('${t.id}',event)` : `showDet('${t.id}')`}">
+        ${chkHtml}
         <div class="kc-priority-bar kc-bar-${t.priority}"></div>
         ${proj ? `<span class="project-tag" style="background:${proj.color}20;color:${proj.color};border:1px solid ${proj.color}40;">${esc(proj.name)}</span>` : ''}
         <div class="kc-title" style="margin-top:${proj ? '3px' : '0'}">${esc(t.title)}</div>
@@ -126,13 +255,25 @@ function dropT(e, ns) {
 // --- LISTA ---
 
 function renderTL(tasks) {
+    // Rebuild thead to include/exclude checkbox column
+    const listThead = document.querySelector('#listView .data-table thead tr');
+    if (listThead) {
+        const chkTh = multiSelectMode ? '<th style="width:32px;"></th>' : '';
+        listThead.innerHTML = `${chkTh}<th>Tarea</th><th>Proy</th><th>Estado</th><th>Urg</th><th>Cx</th><th>Score</th><th>Quien</th><th>Límite</th><th>Sub</th><th></th>`;
+    }
+    const colspan = multiSelectMode ? 11 : 10;
     document.getElementById('taskListBody').innerHTML = tasks.sort((a, b) => tS(b) - tS(a)).map(t => {
         const m    = db.members.find(x => x.id === t.assignee);
         const proj = db.projects.find(p => p.id === t.project);
         const isOD = t.due && t.status !== 'done' && parseDate(t.due) < new Date();
         const sc   = tS(t);
         const sp   = stPct(t);
+        const chkCell = multiSelectMode
+            ? `<td><input type="checkbox" data-task-chk="${t.id}" ${selectedTasks.has(t.id) ? 'checked' : ''}
+                   onclick="toggleTaskSelect('${t.id}',event)" style="cursor:pointer;"></td>`
+            : '';
         return `<tr>
+            ${chkCell}
             <td><strong style="cursor:pointer;" onclick="showDet('${t.id}')">${!depsMet(t) ? '🔒 ' : ''}${esc(t.title)}</strong>${t.recurrence ? '<span class="recur-badge" style="margin-left:3px;">🔄</span>' : ''}</td>
             <td>${proj ? `<span class="project-tag" style="background:${proj.color}20;color:${proj.color};border:1px solid ${proj.color}40;">${esc(proj.name)}</span>` : '—'}</td>
             <td><span class="status status-${t.status}">${sL(t.status)}</span></td>
@@ -147,7 +288,7 @@ function renderTL(tasks) {
                 <button class="btn btn-sm btn-danger"    onclick="event.stopPropagation();delTask('${t.id}')">🗑️</button>
             </td>
         </tr>`;
-    }).join('') || '<tr><td colspan="10" style="text-align:center;color:var(--muted);">—</td></tr>';
+    }).join('') || `<tr><td colspan="${colspan}" style="text-align:center;color:var(--muted);">—</td></tr>`;
 }
 
 // --- MODAL DE TAREA ---
@@ -290,12 +431,17 @@ function saveTask() {
 
 function delTask(id) {
     const t = db.tasks.find(x => x.id === id);
-    if (!t || !confirm(`¿"${t.title}"?`)) return;
+    if (!t) return;
     db.tasks.forEach(x => { if (x.deps) x.deps = x.deps.filter(d => d !== id); });
     db.tasks = db.tasks.filter(x => x.id !== id);
+    if (!db.trash) db.trash = [];
+    db.trash.unshift({ ...t, deletedAt: new Date().toISOString() });
+    const cut = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    db.trash = db.trash.filter(x => x.deletedAt > cut);
     saveDB();
     lg(`🗑️ "${t.title}"`);
     refreshAll();
+    toastUndo(`"${t.title.substring(0, 30)}" eliminada`, () => restoreTask(id));
 }
 
 function clrTask() {

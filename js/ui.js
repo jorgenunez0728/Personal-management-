@@ -13,6 +13,24 @@ function toast(msg, type = 'success') {
     setTimeout(() => el.remove(), 3000);
 }
 
+function toastUndo(msg, undoFn) {
+    const el = document.createElement('div');
+    el.className = 'toast toast-success';
+    el.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    el.innerHTML = `<span style="flex:1;">${msg}</span>
+        <button style="background:rgba(255,255,255,.25);border:none;border-radius:6px;
+                       padding:2px 10px;cursor:pointer;color:#fff;font-weight:700;white-space:nowrap;">
+            Deshacer
+        </button>`;
+    let done = false;
+    el.querySelector('button').addEventListener('click', () => {
+        if (!done) { done = true; undoFn(); }
+        el.remove();
+    });
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
+}
+
 // --- MODALES ---
 
 function openModal(id)  { document.getElementById(id).classList.add('show'); }

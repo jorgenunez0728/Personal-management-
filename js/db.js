@@ -9,14 +9,14 @@ let db = JSON.parse(localStorage.getItem(DB_KEY)) || {
     tasks: [], members: [], projects: [], groups: [],
     categories: ['General','Emisiones','Mantenimiento','Calidad','Seguridad','Administrativo'],
     templates: [], notes: [], activity: [], notifications: [], weeklyLog: [],
-    waLog: [], waRounds: [],
+    waLog: [], waRounds: [], trash: [],
     config: { phone: '', baseUrl: '' },
     dashLayout: null,
     autoConfig: { unblock: true, progress: true, notify: true }
 };
 
 // Compatibilidad con versiones anteriores: inicializar campos que puedan faltar
-['projects','groups','templates','notifications','weeklyLog','notes','activity','waLog','waRounds'].forEach(k => {
+['projects','groups','templates','notifications','weeklyLog','notes','activity','waLog','waRounds','trash'].forEach(k => {
     if (!db[k]) db[k] = [];
 });
 if (!db.autoConfig) db.autoConfig = { unblock: true, progress: true, notify: true };

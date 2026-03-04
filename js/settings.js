@@ -34,6 +34,25 @@ function renderSettings() {
             </div>
             <div style="margin-top:2px;font-size:0.82rem;">${esc(n.text)}</div>
         </div>`).join('');
+
+    // Papelera
+    const trash = db.trash || [];
+    document.getElementById('trashList').innerHTML = trash.length === 0
+        ? '<p style="color:var(--muted);font-size:0.82rem;">Papelera vacía</p>'
+        : trash.slice(0, 10).map(t =>
+            `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">
+                <span style="flex:1;font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(t.title)}">${esc(t.title)}</span>
+                <span style="font-size:0.68rem;color:var(--muted);white-space:nowrap;">${tA(t.deletedAt)}</span>
+                <button class="btn btn-sm btn-secondary" onclick="restoreTask('${t.id}')" title="Restaurar">↩️</button>
+            </div>`
+        ).join('') + (trash.length > 10 ? `<p style="font-size:0.75rem;color:var(--muted);margin-top:4px;">+${trash.length - 10} más</p>` : '');
+}
+
+function emptyTrash() {
+    db.trash = [];
+    saveDB();
+    renderSettings();
+    toast('🗑️ Papelera vaciada');
 }
 
 // --- CATEGORÍAS ---
@@ -110,7 +129,7 @@ function importDB(e) {
             const d = JSON.parse(ev.target.result);
             if (d.tasks && d.members) {
                 db = d;
-                ['projects','groups','templates','notifications','weeklyLog','notes','activity','waLog','waRounds'].forEach(k => {
+                ['projects','groups','templates','notifications','weeklyLog','notes','activity','waLog','waRounds','trash'].forEach(k => {
                     if (!db[k]) db[k] = [];
                 });
                 if (!db.autoConfig) db.autoConfig = { unblock: true, progress: true, notify: true };
