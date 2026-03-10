@@ -31,6 +31,20 @@ function toastUndo(msg, undoFn) {
     setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
 }
 
+// --- DARK MODE ---
+
+function applyDark() {
+    document.body.classList.toggle('dark', !!db.config.darkMode);
+    const btn = document.getElementById('darkBtn');
+    if (btn) btn.textContent = db.config.darkMode ? '☀️' : '🌙';
+}
+
+function toggleDark() {
+    db.config.darkMode = !db.config.darkMode;
+    saveDB();
+    applyDark();
+}
+
 // --- MODALES ---
 
 function openModal(id)  { document.getElementById(id).classList.add('show'); }
@@ -40,6 +54,12 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 
 function lg(action) {
     db.activity.unshift({ action, time: new Date().toISOString() });
+    if (db.activity.length > 200) db.activity = db.activity.slice(0, 200);
+    saveDB();
+}
+
+function lgT(action, taskId) {
+    db.activity.unshift({ action, time: new Date().toISOString(), taskId });
     if (db.activity.length > 200) db.activity = db.activity.slice(0, 200);
     saveDB();
 }
@@ -119,4 +139,9 @@ function popFilters() {
         const el = document.getElementById(id);
         if (el) { const v = el.value; el.innerHTML = go; el.value = v; }
     });
+
+    const co = '<option value="">Categoría</option>' +
+        db.categories.map(c => `<option value="${c}">${esc(c)}</option>`).join('');
+    const elC = document.getElementById('filterCat');
+    if (elC) { const v = elC.value; elC.innerHTML = co; elC.value = v; }
 }

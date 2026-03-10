@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     genNotifs();
     refreshAll();
     startClock();
+    applyDark();
 });
 
 // --- NAVEGACIÓN INFERIOR (mobile) ---

@@ -156,12 +156,14 @@ function getFT() {
     const pf = document.getElementById('filterProject')?.value || '';
     const gf = document.getElementById('filterGroup')?.value   || '';
 
+    const cf = document.getElementById('filterCat')?.value || '';
     if (s)  T = T.filter(t => t.title.toLowerCase().includes(s) || (t.desc || '').toLowerCase().includes(s));
     if (pf) T = T.filter(t => t.project === pf);
     if (gf) {
         const gM = db.members.filter(m => m.groups && m.groups.includes(gf)).map(m => m.id);
         T = T.filter(t => gM.includes(t.assignee));
     }
+    if (cf) T = T.filter(t => t.category === cf);
     if (currentFilter === 'blocked') T = T.filter(t => !depsMet(t) && t.status !== 'done');
     if (currentFilter === 'overdue') T = T.filter(t => t.due && t.status !== 'done' && parseDate(t.due) < new Date());
     if (currentFilter === 'urgent')  T = T.filter(t => t.status !== 'done' && (t.urgency || 2) >= 3);
@@ -414,14 +416,14 @@ function saveTask() {
             checkRecur();
             runAutomations(t.id);
         }
-        lg(`✏️ "${title}"`);
+        lgT(`✏️ Editada`, t.id);
         toast('OK');
     } else {
         d.id       = gid();
         d.created  = new Date().toISOString();
         d.comments = [];
         db.tasks.push(d);
-        lg(`✅ "${title}"`);
+        lgT(`✅ Creada`, d.id);
         toast('Creada');
     }
     saveDB();
@@ -440,7 +442,7 @@ function delTask(id) {
     const cut = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     db.trash = db.trash.filter(x => x.deletedAt > cut);
     saveDB();
-    lg(`🗑️ "${t.title}"`);
+    lgT(`🗑️ Eliminada`, t.id);
     refreshAll();
     toastUndo(`"${t.title.substring(0, 30)}" eliminada`, () => restoreTask(id));
 }
@@ -516,6 +518,20 @@ function showDet(id) {
                 <input type="text" id="newCom" placeholder="Comentario..." style="flex:1;" onkeydown="if(event.key==='Enter')addCom('${t.id}')">
                 <button class="btn btn-sm btn-primary" onclick="addCom('${t.id}')">Enviar</button>
             </div>
+        </div>
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
+            <label>📋 Historial</label>
+            <div style="margin-top:6px;">${
+                (() => {
+                    const hist = db.activity.filter(a => a.taskId === t.id).slice(0, 10);
+                    return hist.length
+                        ? hist.map(a => `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:0.78rem;">
+                            <span style="color:var(--muted);white-space:nowrap;">${fD(a.time)}</span>
+                            <span>${esc(a.action)}</span>
+                          </div>`).join('')
+                        : '<span style="font-size:0.8rem;color:var(--muted);">Sin historial aún</span>';
+                })()
+            }</div>
         </div>`;
 
     document.getElementById('detFoot').innerHTML = `

@@ -10,7 +10,7 @@ let db = JSON.parse(localStorage.getItem(DB_KEY)) || {
     categories: ['General','Emisiones','Mantenimiento','Calidad','Seguridad','Administrativo'],
     templates: [], notes: [], activity: [], notifications: [], weeklyLog: [],
     waLog: [], waRounds: [], trash: [],
-    config: { phone: '', baseUrl: '' },
+    config: { phone: '', baseUrl: '', darkMode: false },
     dashLayout: null,
     autoConfig: { unblock: true, progress: true, notify: true }
 };
@@ -21,7 +21,8 @@ let db = JSON.parse(localStorage.getItem(DB_KEY)) || {
 });
 if (!db.autoConfig) db.autoConfig = { unblock: true, progress: true, notify: true };
 if (!db.categories) db.categories = ['General','Emisiones','Mantenimiento','Calidad','Seguridad','Administrativo'];
-if (!db.config) db.config = { phone: '', baseUrl: '' };
+if (!db.config) db.config = { phone: '', baseUrl: '', darkMode: false };
+if (db.config.darkMode === undefined) db.config.darkMode = false;
 
 // Datos iniciales si la BD está vacía
 if (!db.members.length) {

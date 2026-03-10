@@ -2,6 +2,69 @@
 // REPORTS.JS — Reportes, gráficas y estadísticas
 // ============================================================
 
+function renderBlockers() {
+    const blocked = db.tasks.filter(t => t.status !== 'done' && !depsMet(t));
+    if (!blocked.length) return '<p style="color:var(--muted);font-size:0.85rem;">Sin bloqueos activos ✅</p>';
+    return blocked.map(t => {
+        const blockers = unmetDeps(t).map(b => {
+            const m = db.members.find(x => x.id === b.assignee);
+            return `<span style="display:inline-block;background:var(--surface-alt);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:0.75rem;margin:2px 2px 2px 0;">
+                🔒 ${esc(b.title)}${m ? ` <span style="color:var(--muted);">(${esc(m.name.split(' ')[0])})</span>` : ''}
+            </span>`;
+        }).join('');
+        const ta = db.members.find(x => x.id === t.assignee);
+        return `<div style="padding:8px 10px;border-left:3px solid var(--danger);margin-bottom:6px;background:var(--surface);border-radius:0 6px 6px 0;">
+            <div style="font-weight:600;font-size:0.85rem;">${esc(t.title)}${ta ? `<span style="font-weight:400;color:var(--muted);font-size:0.78rem;margin-left:6px;">${esc(ta.name.split(' ')[0])}</span>` : ''}</div>
+            <div style="margin-top:4px;">${blockers}</div>
+        </div>`;
+    }).join('');
+}
+
+function renderWeeklyLoad() {
+    const members = db.members.filter(m => !m.inactive);
+    if (!members.length) return '<p style="color:var(--muted);font-size:0.85rem;">Sin miembros</p>';
+    const now = new Date();
+    const weeks = Array.from({ length: 4 }, (_, i) => {
+        const start = new Date(now);
+        start.setDate(now.getDate() - now.getDay() + 1 + i * 7);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        return { start, end, label: `S${i + 1} ${start.getDate()}/${start.getMonth() + 1}` };
+    });
+    const activeTasks = db.tasks.filter(t => t.status !== 'done' && t.due);
+    const rows = members.map(m => {
+        const cells = weeks.map(w => {
+            const wt = activeTasks.filter(t => {
+                if (t.assignee !== m.id) return false;
+                const d = parseDate(t.due);
+                return d && d >= w.start && d <= w.end;
+            });
+            const n = wt.length;
+            const bg = n >= 4 ? 'var(--danger)' : n >= 2 ? 'var(--warning)' : n > 0 ? 'var(--success)' : 'var(--border)';
+            const titles = wt.map(t => esc(t.title)).join('&#10;');
+            return `<td style="text-align:center;padding:5px 3px;" title="${titles}">
+                <span style="display:inline-block;min-width:26px;padding:2px 6px;border-radius:12px;background:${bg};color:${n > 0 ? '#fff' : 'var(--muted)'};font-size:0.82rem;font-weight:700;">${n}</span>
+            </td>`;
+        }).join('');
+        return `<tr style="border-bottom:1px solid var(--border);">
+            <td style="font-weight:600;padding:6px 8px;white-space:nowrap;font-size:0.82rem;">${esc(m.name.split(' ')[0])}</td>
+            ${cells}
+        </tr>`;
+    }).join('');
+    return `<div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:var(--surface-alt);">
+                <th style="padding:6px 8px;text-align:left;font-size:0.8rem;">Miembro</th>
+                ${weeks.map(w => `<th style="padding:6px 8px;font-size:0.8rem;">${w.label}</th>`).join('')}
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;">Tareas con vencimiento en esa semana · hover = títulos</p>
+    </div>`;
+}
+
 function renderReports() {
     const T    = db.tasks;
     const tot  = T.length;
@@ -67,6 +130,12 @@ function renderReports() {
             <div class="bar-value">${pd}/${pt.length}</div>
         </div>`;
     }).join('') || '<p style="color:var(--muted);text-align:center;">—</p>';
+
+    // Bloqueos activos
+    document.getElementById('chBlockers').innerHTML = renderBlockers();
+
+    // Carga semanal del equipo
+    document.getElementById('chWeekly').innerHTML = renderWeeklyLoad();
 
     // Gráfico de velocidad (helper compartido con dashboard)
     const vdata = getVelocityData();
