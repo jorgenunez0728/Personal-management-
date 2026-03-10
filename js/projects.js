@@ -31,7 +31,12 @@ function renderProjects() {
                 <div style="text-align:center;font-size:0.72rem;font-weight:800;margin-top:2px;">${pp}%</div>
             </div>`;
         }).join('')
-        : '<p style="color:var(--muted);text-align:center;grid-column:1/-1;">Sin proyectos</p>';
+        : `<div class="empty-state" style="grid-column:1/-1;">
+            <div class="es-icon">🗂️</div>
+            <div class="es-title">Sin proyectos</div>
+            <div class="es-desc">Crea tu primer proyecto para organizar las tareas del laboratorio</div>
+            <button class="btn btn-primary btn-sm" onclick="openProjectModal()">＋ Nuevo proyecto</button>
+          </div>`;
 }
 
 // --- MODAL PROYECTO ---

@@ -230,3 +230,27 @@ textarea{min-height:65px;resize:vertical}
     .kanban-board{grid-template-columns:1fr 1fr}
     .stats-row{grid-template-columns:repeat(2,1fr)}
 }
+
+/* EMPTY STATES */
+.empty-state{display:flex;flex-direction:column;align-items:center;padding:28px 16px;color:var(--muted);text-align:center}
+.empty-state .es-icon{font-size:2.2rem;margin-bottom:8px;opacity:0.55}
+.empty-state .es-title{font-weight:700;font-size:0.92rem;margin-bottom:4px;color:var(--text)}
+.empty-state .es-desc{font-size:0.8rem;margin-bottom:12px}
+
+/* KANBAN CARD QUICK-ACTIONS */
+.kc-actions{display:flex;gap:3px;margin-top:5px;opacity:0;transition:opacity 0.15s}
+.kanban-card:hover .kc-actions{opacity:1}
+@media(max-width:700px){.kc-actions{opacity:1}}
+.kc-act-btn{flex:1;padding:3px 5px;border:1px solid var(--border);border-radius:6px;background:var(--surface-alt);font-size:0.68rem;cursor:pointer;white-space:nowrap;text-align:center;font-family:inherit;line-height:1.4;transition:all 0.15s}
+.kc-act-btn:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+.kc-act-del{flex:0 0 auto;color:var(--danger) !important;border-color:var(--border)}
+.kc-act-del:hover{background:#fef2f2 !important;border-color:var(--danger) !important}
+
+/* MOBILE TASK CARDS (list view on small screens) */
+.mobile-task-card{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 10px 10px 0;margin-bottom:6px;position:relative;cursor:pointer;animation:cardIn 0.2s ease both}
+.mobile-task-card:active{background:var(--surface-alt)}
+
+/* ANIMATIONS */
+@keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes taskDone{0%{transform:scale(1)}40%{transform:scale(1.05);box-shadow:0 0 0 5px rgba(16,185,129,0.25)}85%{transform:scale(1);box-shadow:none}100%{opacity:0.6}}
+.card-completing{animation:taskDone 0.5s ease forwards !important;pointer-events:none}

@@ -55,7 +55,12 @@ function renderTeam() {
                 <button class="btn btn-sm btn-danger" onclick="delMem('${m.id}')">🗑️</button>
             </div>
         </div>`;
-    }).join('') || '<p style="text-align:center;color:var(--muted);grid-column:1/-1;">—</p>';
+    }).join('') || `<div class="empty-state" style="grid-column:1/-1;">
+        <div class="es-icon">👥</div>
+        <div class="es-title">Sin miembros</div>
+        <div class="es-desc">Agrega los técnicos del laboratorio para asignar tareas</div>
+        <button class="btn btn-primary btn-sm" onclick="openMemberModal()">＋ Nuevo miembro</button>
+    </div>`;
 }
 
 function openMemberModal(id) {

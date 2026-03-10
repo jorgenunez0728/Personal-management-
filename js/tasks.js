@@ -127,6 +127,14 @@ function restoreTask(id) {
     toast('↩️ Restaurada');
 }
 
+// --- FILTRO "MIS TAREAS" ---
+let filterMine = false;
+function toggleMineFilter(btn) {
+    filterMine = !filterMine;
+    if (btn) btn.classList.toggle('active', filterMine);
+    renderTasks();
+}
+
 // Versiones con debounce para el buscador
 const renderTasksD = debounce(renderTasks, 200);
 
@@ -164,6 +172,7 @@ function getFT() {
         T = T.filter(t => gM.includes(t.assignee));
     }
     if (cf) T = T.filter(t => t.category === cf);
+    if (filterMine && db.members.length) T = T.filter(t => t.assignee === db.members[0].id);
     if (currentFilter === 'blocked') T = T.filter(t => !depsMet(t) && t.status !== 'done');
     if (currentFilter === 'overdue') T = T.filter(t => t.due && t.status !== 'done' && parseDate(t.due) < new Date());
     if (currentFilter === 'urgent')  T = T.filter(t => t.status !== 'done' && (t.urgency || 2) >= 3);
@@ -178,24 +187,29 @@ function renderKB(tasks) {
     const sts = ['pending','progress','review','done','blocked'];
     const lb  = { pending:'⏳ Pend', progress:'🔄 Prog', review:'👁️ Rev', done:'✅ Hecha', blocked:'🚫 Bloq' };
     const cl  = { pending:'kh-pending', progress:'kh-progress', review:'kh-review', done:'kh-done', blocked:'kh-blocked' };
+    const ei  = { pending:'📋', progress:'⚙️', review:'👁️', done:'✅', blocked:'🔒' };
 
     document.getElementById('kanbanBoard').innerHTML = sts.map(s => {
         const col = s === 'blocked'
             ? tasks.filter(t => t.status === 'blocked' || (!depsMet(t) && t.status !== 'done'))
             : tasks.filter(t => t.status === s && (s === 'done' || depsMet(t)));
+        const sorted = col.sort((a, b) => tS(b) - tS(a));
+        const cards = sorted.length
+            ? sorted.map((t, i) => kcCard(t, i)).join('')
+            : `<div class="empty-state"><div class="es-icon">${ei[s]}</div><div class="es-title" style="font-size:0.8rem;">Sin tareas</div></div>`;
         return `<div class="kanban-column">
             <div class="kanban-header ${cl[s]}">${lb[s]} <span class="count">${col.length}</span></div>
             <div class="kanban-cards" data-status="${s}"
                 ondragover="event.preventDefault();this.style.background='var(--accent-light)'"
                 ondragleave="this.style.background=''"
                 ondrop="dropT(event,'${s}');this.style.background=''">
-                ${col.sort((a, b) => tS(b) - tS(a)).map(t => kcCard(t)).join('')}
+                ${cards}
             </div>
         </div>`;
     }).join('');
 }
 
-function kcCard(t) {
+function kcCard(t, idx = 0) {
     const m    = db.members.find(x => x.id === t.assignee);
     const isOD = t.due && t.status !== 'done' && parseDate(t.due) < new Date();
     const met  = depsMet(t);
@@ -211,18 +225,30 @@ function kcCard(t) {
         : '';
     const onclk = multiSelectMode ? `toggleTaskSelect('${t.id}',event)` : `showDet('${t.id}')`;
 
+    const NEXT_LBL = { pending:'▶ Iniciar', progress:'✔ Revisar', review:'✅ Completar', blocked:'↩ Reabrir' };
+    const qActHtml = (!multiSelectMode && t.status !== 'done')
+        ? `<div class="kc-actions" onclick="event.stopPropagation()">
+            <button class="kc-act-btn" onclick="quickNextStatus('${t.id}')">${NEXT_LBL[t.status] || '→'}</button>
+            <button class="kc-act-btn kc-act-del" onclick="delTask('${t.id}')">🗑</button>
+           </div>`
+        : '';
+
     return `<div class="kanban-card ${!met ? 'blocked-card' : ''}"
-        style="position:relative;"
+        data-task-id="${t.id}"
+        style="position:relative;animation:cardIn 0.2s ease both;animation-delay:${idx * 25}ms"
         draggable="${!multiSelectMode && (met || t.status === 'done')}"
         ondragstart="event.dataTransfer.setData('text/plain','${t.id}')"
         onclick="${onclk}">
         ${chkHtml}
         <div class="kc-priority-bar kc-bar-${t.priority}"></div>
-        ${proj ? `<span class="project-tag" style="background:${proj.color}20;color:${proj.color};border:1px solid ${proj.color}40;">${esc(proj.name)}</span>` : ''}
-        <div class="kc-title" style="margin-top:${proj ? '3px' : '0'}">${esc(t.title)}</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-bottom:1px;">
+            ${proj ? `<span class="project-tag" style="background:${proj.color}20;color:${proj.color};border:1px solid ${proj.color}40;">${esc(proj.name)}</span>` : ''}
+            ${t.category ? `<span style="font-size:0.6rem;background:var(--surface-alt);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--muted);">${esc(t.category)}</span>` : ''}
+        </div>
+        <div class="kc-title" style="margin-top:${(proj || t.category) ? '3px' : '0'}">${esc(t.title)}</div>
         <div style="display:flex;gap:2px;flex-wrap:wrap;margin:2px 0;">
-            <span class="score-pill ${sCC(sc)}">${sc}</span>
-            <span class="urgency-tag ${uC(t.urgency || 2)}" style="font-size:0.62rem;">${uI(t.urgency || 2)}</span>
+            <span class="score-pill ${sCC(sc)}" title="Score: ${t.urgency||2}urg × ${t.complexity||3}cx × ${pW(t.priority)}pri = ${sc}">${sc}</span>
+            <span class="urgency-tag ${uC(t.urgency || 2)}" style="font-size:0.62rem;" title="${uL(t.urgency || 2)}">${uI(t.urgency || 2)}</span>
             ${t.recurrence ? '<span class="recur-badge">🔄</span>' : ''}
         </div>
         ${sp >= 0 ? `<div class="subtask-bar"><div class="subtask-fill" style="width:${sp}%"></div></div>
@@ -230,10 +256,11 @@ function kcCard(t) {
         ${!met ? `<div class="dep-lock">🔒 ${esc(unmetDeps(t).map(d => d.title).join(', '))}</div>` : ''}
         <div class="kc-meta" style="margin-top:3px;">
             <div style="display:flex;align-items:center;gap:3px;">
-                ${m ? `<div class="avatar" style="background:${m.color}">${ini(m.name)}</div><span>${esc(m.name.split(' ')[0])}</span>` : '—'}
+                ${m ? `<div class="avatar" style="background:${m.color}" title="${esc(m.name)}">${ini(m.name)}</div><span>${esc(m.name.split(' ')[0])}</span>` : '—'}
             </div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;${isOD ? 'color:var(--danger);font-weight:700;' : ''}">${t.due ? fS(t.due) : ''}</div>
         </div>
+        ${qActHtml}
     </div>`;
 }
 
@@ -250,22 +277,92 @@ function dropT(e, ns) {
         saveDB();
         lg(`📋 "${t.title}": ${sL(old)}→${sL(ns)}`);
         genNotifs();
-        refreshAll();
+        if (ns === 'done') {
+            const card = document.querySelector(`[data-task-id="${tid}"]`);
+            if (card) { card.classList.add('card-completing'); setTimeout(() => refreshAll(), 520); }
+            else refreshAll();
+        } else refreshAll();
         toast(`→ ${sL(ns)}`);
     }
+}
+
+const NEXT_STATUS = { pending:'progress', progress:'review', review:'done', done:'done', blocked:'pending' };
+function quickNextStatus(id) {
+    const t = db.tasks.find(x => x.id === id);
+    if (!t) return;
+    const ns = NEXT_STATUS[t.status];
+    if (!ns || ns === t.status) return;
+    if (!depsMet(t) && ns !== 'pending') { toast('🔒 Dependencias pendientes', 'error'); return; }
+    const old = t.status;
+    t.status = ns;
+    if (ns === 'done') { t.completedAt = new Date().toISOString(); checkRecur(); runAutomations(t.id); }
+    saveDB();
+    lgT(`→ ${sL(ns)}`, t.id);
+    genNotifs();
+    if (ns === 'done') {
+        const card = document.querySelector(`[data-task-id="${id}"]`);
+        if (card) { card.classList.add('card-completing'); setTimeout(() => refreshAll(), 520); }
+        else refreshAll();
+    } else refreshAll();
+    toast(`→ ${sL(ns)}`);
 }
 
 // --- LISTA ---
 
 function renderTL(tasks) {
+    const sorted = tasks.sort((a, b) => tS(b) - tS(a));
+
+    // --- MÓVIL: tarjetas compactas ---
+    if (window.innerWidth < 700) {
+        const tbl = document.querySelector('#listView .data-table');
+        if (tbl) tbl.style.display = 'none';
+        let ml = document.getElementById('mobileList');
+        if (!ml) {
+            ml = document.createElement('div');
+            ml.id = 'mobileList';
+            document.getElementById('listView').appendChild(ml);
+        }
+        ml.style.display = '';
+        if (!sorted.length) {
+            ml.innerHTML = `<div class="empty-state"><div class="es-icon">🔍</div><div class="es-title">Sin resultados</div><div class="es-desc">Prueba con otros filtros</div></div>`;
+            return;
+        }
+        ml.innerHTML = sorted.map((t, i) => {
+            const m   = db.members.find(x => x.id === t.assignee);
+            const isOD = t.due && t.status !== 'done' && parseDate(t.due) < new Date();
+            return `<div class="mobile-task-card" style="animation-delay:${i * 20}ms" onclick="showDet('${t.id}')">
+                <div class="kc-priority-bar kc-bar-${t.priority}" style="width:3px;height:auto;position:absolute;left:0;top:0;bottom:0;border-radius:10px 0 0 10px;"></div>
+                <div style="flex:1;min-width:0;padding-left:8px;">
+                    <div style="font-weight:700;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${!depsMet(t) ? '🔒 ' : ''}${esc(t.title)}</div>
+                    <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;align-items:center;">
+                        <span class="status status-${t.status}" style="font-size:0.63rem;">${sL(t.status)}</span>
+                        <span class="urgency-tag ${uC(t.urgency||2)}" style="font-size:0.63rem;" title="${uL(t.urgency||2)}">${uI(t.urgency||2)}</span>
+                        ${t.category ? `<span style="font-size:0.6rem;background:var(--surface-alt);border:1px solid var(--border);border-radius:4px;padding:1px 4px;color:var(--muted);">${esc(t.category)}</span>` : ''}
+                    </div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+                    ${m ? `<div class="avatar" style="background:${m.color};width:26px;height:26px;font-size:0.6rem;" title="${esc(m.name)}">${ini(m.name)}</div>` : ''}
+                    <div style="font-size:0.68rem;${isOD ? 'color:var(--danger);font-weight:700;' : 'color:var(--muted);'}">${t.due ? fS(t.due) : ''}</div>
+                </div>
+            </div>`;
+        }).join('');
+        return;
+    }
+
+    // --- DESKTOP: tabla ---
+    const tbl2 = document.querySelector('#listView .data-table');
+    if (tbl2) tbl2.style.display = '';
+    const ml2 = document.getElementById('mobileList');
+    if (ml2) ml2.style.display = 'none';
+
     // Rebuild thead to include/exclude checkbox column
     const listThead = document.querySelector('#listView .data-table thead tr');
     if (listThead) {
         const chkTh = multiSelectMode ? '<th style="width:32px;"></th>' : '';
-        listThead.innerHTML = `${chkTh}<th>Tarea</th><th>Proy</th><th>Estado</th><th>Urg</th><th>Cx</th><th>Score</th><th>Quien</th><th>Límite</th><th>Sub</th><th></th>`;
+        listThead.innerHTML = `${chkTh}<th>Tarea</th><th>Proy</th><th>Cat</th><th>Estado</th><th>Urg</th><th>Cx</th><th>Score</th><th>Quien</th><th>Límite</th><th>Sub</th><th></th>`;
     }
-    const colspan = multiSelectMode ? 11 : 10;
-    document.getElementById('taskListBody').innerHTML = tasks.sort((a, b) => tS(b) - tS(a)).map(t => {
+    const colspan = multiSelectMode ? 12 : 11;
+    document.getElementById('taskListBody').innerHTML = sorted.map(t => {
         const m    = db.members.find(x => x.id === t.assignee);
         const proj = db.projects.find(p => p.id === t.project);
         const isOD = t.due && t.status !== 'done' && parseDate(t.due) < new Date();
@@ -279,10 +376,11 @@ function renderTL(tasks) {
             ${chkCell}
             <td><strong style="cursor:pointer;" onclick="showDet('${t.id}')">${!depsMet(t) ? '🔒 ' : ''}${esc(t.title)}</strong>${t.recurrence ? '<span class="recur-badge" style="margin-left:3px;">🔄</span>' : ''}</td>
             <td>${proj ? `<span class="project-tag" style="background:${proj.color}20;color:${proj.color};border:1px solid ${proj.color}40;">${esc(proj.name)}</span>` : '—'}</td>
+            <td style="font-size:0.75rem;color:var(--muted);">${t.category ? esc(t.category) : '—'}</td>
             <td><span class="status status-${t.status}">${sL(t.status)}</span></td>
-            <td><span class="urgency-tag ${uC(t.urgency || 2)}">${uI(t.urgency || 2)}</span></td>
+            <td><span class="urgency-tag ${uC(t.urgency || 2)}" title="${uL(t.urgency||2)}">${uI(t.urgency || 2)}</span></td>
             <td>${t.complexity || 3}</td>
-            <td><span class="score-pill ${sCC(sc)}">${sc}</span></td>
+            <td><span class="score-pill ${sCC(sc)}" title="Score: ${t.urgency||2}urg × ${t.complexity||3}cx × ${pW(t.priority)}pri = ${sc}">${sc}</span></td>
             <td>${m ? esc(m.name.split(' ')[0]) : '—'}</td>
             <td style="${isOD ? 'color:var(--danger);font-weight:700;' : ''}">${t.due ? fS(t.due) : '—'}</td>
             <td>${sp >= 0 ? sp + '%' : '—'}</td>
@@ -291,7 +389,7 @@ function renderTL(tasks) {
                 <button class="btn btn-sm btn-danger"    onclick="event.stopPropagation();delTask('${t.id}')">🗑️</button>
             </td>
         </tr>`;
-    }).join('') || `<tr><td colspan="${colspan}" style="text-align:center;color:var(--muted);">—</td></tr>`;
+    }).join('') || `<tr><td colspan="${colspan}"><div class="empty-state"><div class="es-icon">🔍</div><div class="es-title">Sin resultados</div><div class="es-desc">Prueba con otros filtros</div></div></td></tr>`;
 }
 
 // --- MODAL DE TAREA ---
